@@ -1,0 +1,12 @@
+# Raw data: download from Mendeley Data (link in README), do not publish
+data/
+*.csv
+
+# Office temp files
+~$*.xlsx
+
+# OS files
+.DS_Store
+Thumbs.db
+
+INTERVIEW_STORYTELLING.MD
