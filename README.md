@@ -1,6 +1,6 @@
 # Telecom B2B Customer Churn Analysis
 
-**Status:** Data quality checks, SQL analysis and a two-page Power BI dashboard are complete. Excel cross-check is saved in `outputs/`.
+**Status:** Data quality checks, SQL analysis, Excel cross-check and a two-page Power BI dashboard are complete.
 
 ## 1. Business question
 
@@ -29,7 +29,7 @@
   - `KA_name`: name of the Key Account Manager.
   - `TotalRevenue`: total revenue from the business customer. The source names the mobile and fixed columns "average", but the checks show that they add up to `TotalRevenue` (check 7). This project treats all three as totals. Confirm with the data owner if possible.
 - **Currency:** Not stated in the source. The data comes from Bulgaria, and the Bulgarian lev (BGN) was the currency in 2024. Revenue is assumed to be in BGN. This is an assumption, not confirmed by the source.
-- **Privacy:** The `KA_name` column has 12 distinct values, 4 of which are person names. The column is removed from the Power BI model. Person names are not included in this repository. The raw CSV is not included either.
+- **Privacy:** The `KA_name` column has 12 distinct values. Four are full personal names. The column is removed from the Power BI model. Names are not included in this repository. The raw CSV is not included either.
 
 **Main columns:** PID, CRM_PID_Value_Segment, EffectiveSegment, Billing_ZIP, KA_name, Active_subscribers, Not_Active_subscribers, Suspended_subscribers, Total_SUBs, AvgMobileRevenue, AvgFIXRevenue, TotalRevenue, ARPU, CHURN.
 
@@ -49,7 +49,7 @@ All checks are in `sql/00_verify_import_and_quality.sql`.
 | 8 | ARPU | TotalRevenue ÷ Active_subscribers matches ARPU within 0.01 for 8,330 of 8,452 comparable rows | 122 rows do not match. Documented, not corrected. 1 row has blank ARPU and is excluded |
 | 9 | Segment typo | "Sliver" appears in 1 row | Kept separate in the output. Too small to draw a conclusion |
 | 10 | Blank segment | 5 rows | Kept as a separate group. Too small to draw a conclusion |
-| 11 | KA_name | 12 distinct values, 4 of them person names | Person names are not included in this repository. Column removed from the Power BI model |
+| 11 | KA_name | 12 distinct values. 4 are full personal names. 8 are short codes (initials), one of them with a question mark (AD?) | Names are not included in this repository. Values kept as they are in the source. Column removed from the Power BI model |
 | 12 | Excel cross-check | Row count, churn counts, revenue totals, churn %, churned revenue share and blank counts match SQL | See `outputs/p2_excel_validation.xlsx` |
 | 13 | Blank PID | SQL: 0. Excel: 0 after importing PID as Text | An earlier Excel import showed 89 blanks. After importing PID as Text, the blanks disappeared. The cause was the Excel import, not the data |
 | 14 | Blank Not_Active | 4,149 rows with blank Not_Active | Treated as 0 in all calculations |
@@ -107,7 +107,7 @@ The gap between churned and active accounts is small for every signal. Churned a
 
 **Finding 6: The signal-based list is too broad to target.**
 
-6,774 active accounts (85.7% of active accounts) show at least one signal. They carry 986,797.07 of revenue, about 84.9% of active revenue. The active revenue figure is calculated as 1,258,086.54 − 95,418.95 = 1,162,667.59, so the share is 986,797.07 ÷ 1,162,667.59. This is too many accounts for a retention priority list.
+6,774 active accounts (85.7% of active accounts) show at least one signal. They carry 986,797.07 of revenue. This is too many accounts for a retention priority list.
 
 ## 5. Dashboard
 
@@ -120,21 +120,21 @@ The dashboard has two pages. Both use the same data and the same measures as the
 - 4 KPI cards: Churn %, Churned Accounts, Churned Revenue, Churned Revenue Share.
 - Churn % by CRM segment, with segments above the 6.49% average highlighted.
 - Churned accounts by CRM segment.
-- Segment slicer. The KPI cards are not affected by the slicer, so they always show the overall totals.
 - Table with accounts, churned accounts and churn % for each segment.
+- Sliver (1 account) and the blank segment (5 accounts) are excluded from the charts as too small to read. Lead (27 accounts) had no churn, so it is shown as a note, not as a bar.
 
 **Page 2: Retention Priority** answers *which active accounts to call first*.
 
 [![Page 2: Retention Priority](images/telecom_dashboard_page2.png)](images/telecom_dashboard_page2.png)
 
-- 4 KPI cards: Active accounts (7,904), Flagged Active Accounts (6,774), Revenue at flagged accounts (986,797.07), and Share of Active Accounts (85.7%).
+- 4 KPI cards: Share of Active Accounts (85.7%), Flagged Active Accounts (6,774), Active accounts (7,904), and Revenue at flagged accounts (986,797.07).
 - Signal rate chart: churned and active accounts side by side for each signal.
 - Headline: signals barely separate churned from active accounts.
 - The flagged list is not used as a call list, because it covers 85.7% of active accounts (see Finding 6).
 
 ## 6. Recommendations
 
-1. **Prioritise active accounts in Platinum, SME, Gold and Silver for retention review.** These segments churn above the overall 6.49%. Churned accounts also have higher average revenue across all accounts (173.81 vs 147.11).
+1. **Prioritise active accounts in Platinum, SME, Gold and Silver for retention review.** These segments churn above the overall 6.49%. Average TotalRevenue is 173.81 for churned accounts and 147.11 for active accounts.
 2. **Do not use the current signals alone to pick calls.** Agree on a tighter rule with the business team, and test it on churn history before using it.
 3. **Collect monthly snapshots.** A single snapshot cannot show which accounts changed status before they churned. Monthly data would make that comparison possible.
 4. **Check the data at source.** Confirm the meaning of blank Not_Active and Suspended values, the 122 ARPU mismatch rows, and the PID format.
@@ -150,6 +150,7 @@ The dashboard has two pages. Both use the same data and the same measures as the
 - **Suspended definition:** The source describes Suspended_subscribers as the number in the last 6 months. The time window is not the same as the snapshot.
 - **ARPU mismatch:** 122 rows do not match TotalRevenue ÷ Active_subscribers. They are kept as they are.
 - **Revenue column names:** The source describes TotalRevenue as total revenue from the business customer, and the mobile and fixed columns add up to it. This project reads them as totals. Not confirmed with the data owner.
+- **KA_name values:** One value contains a question mark (AD?). It is kept as it is in the source and not used in any analysis.
 - **Small groups:** Lead, SE, Sliver and blank segments are too small for reliable percentages.
 - **Averages:** Average values can be pulled by large accounts. Medians were not calculated.
 - **Causation:** This analysis finds patterns, not causes.
@@ -177,4 +178,4 @@ The dashboard has two pages. Both use the same data and the same measures as the
 1. Import the CSV into a SQL Server table named `telecom_customers` in a database named `telecom_churn`.
 2. Run `sql/00_verify_import_and_quality.sql`. Results should match the expected values in each query's comments.
 3. Run `sql/01_analysis_queries.sql`.
-4. Optional: open `powerbi/telecom_churn_dashboard.pbix`. It points to `localhost\SQLEXPRESS`, database `telecom_churn`, table `dbo.telecom_customers`.
+4. Optional: open `powerbi/telecom_churn_dashboard.pbix`. It uses the local `telecom_churn` database and the `dbo.telecom_customers` table. Update the data source if your server name is different.
